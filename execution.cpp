@@ -1,44 +1,57 @@
-#import <Foundation/Foundation.h>
-#include "exploit.hpp"
+#include "execution.hpp"
 #include "config.hpp"
 #include "memory.hpp"
+#include <cstdlib>
+#include <cstdio>
 
-extern "C" void* DobbyHook(void* address, void* replace, void** origin);
+#include "lua.h"
+#include "luacode.h"
 
-void* ExploitThread = nullptr;
-std::vector<std::string> ExecutionRequests;
-static uintptr_t g_robloxLibBase = 0;
+extern "C" void* ExploitThread;
 
-typedef int (*luau_load_t)(void*, const char*, const char*, size_t, int);
-static luau_load_t g_orig_luau_load = nullptr;
-
-static int HookedLuauLoad(void* L, const char* chunk, const char* data, size_t len, int env) {
-    if (!ExploitThread && L) {
-        typedef void* (*lua_newthread_t)(void*);
-        auto lua_newthread = (lua_newthread_t)(g_robloxLibBase + Offsets::Luau::lua_newthread);
-        ExploitThread = lua_newthread(L);
-        NSLog(@"[Spork] SUCESSO: lua_State capturado via luau_load: %p", ExploitThread);
+int ExecuteScript(void* L, const std::string& Source) {
+    if (!L) {
+        fprintf(stderr, "[Spork] ERRO: lua_State (L) é NULL.\n");
+        return -5;
     }
-    return g_orig_luau_load(L, chunk, data, len, env);
-}
-
-void SetupExploit() {
-    if (g_robloxLibBase) return;
-    g_robloxLibBase = memory::GetRobloxLibBase();
-    if (!g_robloxLibBase) return;
-
-    uintptr_t luauLoadAddr = g_robloxLibBase + Offsets::Luau::luau_load;
-    void* orig = nullptr;
-    DobbyHook((void*)luauLoadAddr, (void*)HookedLuauLoad, &orig);
-    g_orig_luau_load = (luau_load_t)orig;
-
-    if (g_orig_luau_load) NSLog(@"[Spork] Hook do luau_load aplicado.");
-}
-
-void RequestExecution(const std::string& Script) {
-    if (!ExploitThread) {
-        NSLog(@"[Spork] AVISO: Script enfileirado, mas o lua_State está NULL. O jogo carregou?");
+    uintptr_t base = memory::GetRobloxLibBase();
+    if (!base) {
+        fprintf(stderr, "[Spork] ERRO: RobloxLib base não encontrada.\n");
+        return -4;
     }
-    ExecutionRequests.push_back(Script);
-    NSLog(@"[Spork] Script adicionado na fila (Total na fila: %lu)", ExecutionRequests.size());
+
+    // 1. Compila
+    size_t bcSize = 0;
+    char* bc = luau_compile(Source.c_str(), Source.size(), nullptr, &bcSize);
+    if (!bc) {
+        fprintf(stderr, "[Spork] ERRO: luau_compile retornou NULL.\n");
+        return -1;
+    }
+
+    typedef int (*luau_load_t)(void*, const char*, const char*, size_t, int);
+    typedef int (*lua_pcall_t)(void*, int, int, int);
+    typedef const char* (*lua_tolstring_t)(void*, int, size_t*);
+
+    auto luau_load = (luau_load_t)(base + Offsets::Luau::luau_load);
+    auto lua_pcall = (lua_pcall_t)(base + Offsets::Luau::lua_pcall);
+    auto lua_tolstring = (lua_tolstring_t)(base + Offsets::Luau::lua_tolstring);
+
+    // 2. Carrega
+    if (luau_load(L, "=Spork", bc, bcSize, 0) != 0) {
+        size_t len = 0;
+        const char* err = lua_tolstring(L, -1, &len);
+        fprintf(stderr, "[Spork] ERRO luau_load: %s\n", err ? err : "Desconhecido");
+        free(bc);
+        return -2;
+    }
+    free(bc);
+
+    // 3. Executa
+    int result = lua_pcall(L, 0, 0, 0);
+    if (result != 0) {
+        size_t len = 0;
+        const char* err = lua_tolstring(L, -1, &len);
+        fprintf(stderr, "[Spork] ERRO lua_pcall (%d): %s\n", result, err ? err : "Desconhecido");
+    }
+    return result;
 }
