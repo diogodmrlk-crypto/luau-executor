@@ -1,5 +1,11 @@
-// execution.hpp
 #pragma once
 #include <string>
+#include <vector>
+#include <cstdint>
 
-int ExecuteScript(void* L, const std::string& Source);
+extern "C" void* ExploitThread;
+extern std::vector<std::string> ExecutionRequests;
+
+void SetupExploit();
+void SetupExecution(void* L);
+void RequestExecution(const std::string& Script);
