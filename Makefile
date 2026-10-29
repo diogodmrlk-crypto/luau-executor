@@ -4,12 +4,11 @@ INSTALL_TARGET_PROCESSES = SpringBoard
 
 TWEAK_NAME = Spork
 
-# Compila o teu código e os fontes do Luau que estão nas pastas da raiz
 Spork_FILES = Tweak.xm SporkUI.mm exploit.mm hooks.mm memory.cpp execution.cpp
 Spork_FILES += $(wildcard VM/src/*.cpp) $(wildcard Compiler/src/*.cpp) $(wildcard Ast/src/*.cpp) $(wildcard Bytecode/src/*.cpp) $(wildcard Common/src/*.cpp)
 
-# Adiciona os includes exatamente como o Makefile oficial do Luau exige
-Spork_CFLAGS = -fobjc-arc -std=c++17 \
+# Adicionado -Wno-error e -Wno-unused-but-set-variable para o build não parar com avisos
+Spork_CFLAGS = -fobjc-arc -std=c++17 -Wno-error -Wno-unused-but-set-variable -Wno-unused-variable \
                -I$(THEOS_PROJECT_DIR)/VM/include \
                -I$(THEOS_PROJECT_DIR)/Compiler/include \
                -I$(THEOS_PROJECT_DIR)/Common/include \
@@ -17,7 +16,6 @@ Spork_CFLAGS = -fobjc-arc -std=c++17 \
                -I$(THEOS_PROJECT_DIR)/Bytecode/include \
                -I$(THEOS_PROJECT_DIR)
 
-# Linka o Dobby
 Spork_LDFLAGS = -undefined dynamic_lookup -L$(THEOS_PROJECT_DIR)/lib -lDobby
 Spork_FRAMEWORKS = UIKit Foundation Security
 
