@@ -10,13 +10,16 @@
         ShowSporkUI();
     });
 
-    // 2. Timer para pegar o RobloxLib
-    [NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
-        if (memory::GetRobloxLibBase() != 0) {
-            [timer invalidate];
-            SetupExploit();
-            SetupExecution(nullptr);
-            NSLog(@"[Spork] Hooks globais injetados.");
+    // 2. Roda o hook numa thread separada (Background Thread) pra não crashar o app
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        while (memory::GetRobloxLibBase() == 0) {
+            [NSThread sleepForTimeInterval:1.0];
         }
-    }];
+        
+        // Aplica APENAS o hook do luau_load (que é essencial)
+        SetupExploit();
+        
+        // NÃO CHAMA MAIS O SetupExecution (gc_step) POR ENQUANTO.
+        NSLog(@"[Spork] Hook do luau_load aplicado com segurança na background.");
+    });
 }
