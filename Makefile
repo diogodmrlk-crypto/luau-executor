@@ -15,6 +15,7 @@ Spork_CFLAGS = -fobjc-arc -std=c++17 -Wno-error -Wno-unused-but-set-variable -Wn
                -I$(THEOS_PROJECT_DIR)/Ast/include \
                -I$(THEOS_PROJECT_DIR)/Bytecode/include
 
+# Linka o Dobby (que já está na pasta lib)
 Spork_LDFLAGS = -undefined dynamic_lookup -L$(THEOS_PROJECT_DIR)/lib -lDobby
 Spork_FRAMEWORKS = UIKit Foundation Security
 
