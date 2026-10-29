@@ -10,6 +10,10 @@ extern "C" void* ExploitThread;
 
 int ExecuteScript(void* L, const std::string& Source) {
     if (!L) return -5;
+    
+    // Garantia extra: limpa o PAC do ponteiro aqui também
+    void* cleanL = STRIP_PAC(L);
+    
     uintptr_t base = memory::GetRobloxLibBase();
     if (!base) return -4;
 
@@ -23,11 +27,12 @@ int ExecuteScript(void* L, const std::string& Source) {
     auto luau_load = (luau_load_t)(base + Offsets::Luau::luau_load);
     auto lua_pcall = (lua_pcall_t)(base + Offsets::Luau::lua_pcall);
 
-    if (luau_load(L, "=Spork", bc, bcSize, 0) != 0) {
+    // Usa o cleanL
+    if (luau_load(cleanL, "=Spork", bc, bcSize, 0) != 0) {
         free(bc);
         return -2;
     }
     free(bc);
 
-    return lua_pcall(L, 0, 0, 0);
+    return lua_pcall(cleanL, 0, 0, 0);
 }
