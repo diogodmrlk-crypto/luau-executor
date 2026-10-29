@@ -6,6 +6,9 @@
 #include "config.hpp"
 #include "memory.hpp"
 
+// Força o linker a procurar o nome C da função (remove o __Z9... do iOS)
+extern "C" void* DobbyHook(void* address, void* replace, void** origin);
+
 typedef uint64_t (*gc_step_t)(void*, int);
 static gc_step_t g_orig_gc_step = nullptr;
 
@@ -25,7 +28,6 @@ void SetupExecution(void* L) {
 
     uintptr_t gcStepAddr = base + Offsets::Luau::gc_step;
     
-    extern void* DobbyHook(void* address, void* replace, void** origin);
     void* orig = nullptr;
     DobbyHook((void*)gcStepAddr, (void*)HookedGcStep, &orig);
     g_orig_gc_step = (gc_step_t)orig;
