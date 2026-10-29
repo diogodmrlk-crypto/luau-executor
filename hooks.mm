@@ -1,6 +1,7 @@
 // hooks.mm
 #import <Foundation/Foundation.h>
-#import <substrate.h> // Importa o Substrate
+#import "dobby.h" // Importa o header do Dobby corretamente
+#include <ptrauth.h> // Para remover a proteção PAC (arm64e)
 #include "hooks.hpp"
 #include "exploit.hpp"
 #include "execution.hpp"
@@ -26,8 +27,12 @@ void SetupExecution(void* L) {
 
     uintptr_t gcStepAddr = base + Offsets::Luau::gc_step;
     
-    // Usa MSHookFunction do Substrate
-    MSHookFunction((void*)gcStepAddr, (void*)HookedGcStep, (void**)&g_orig_gc_step);
+    // Remove a assinatura PAC do endereço
+    void* hookAddr = ptrauth_strip((void*)gcStepAddr, ptrauth_key_asm_isa);
+
+    void* orig = nullptr;
+    DobbyHook(hookAddr, (void*)HookedGcStep, &orig);
+    g_orig_gc_step = (gc_step_t)orig;
 
     if (g_orig_gc_step) NSLog(@"[Spork] gc_step hooked");
 }
