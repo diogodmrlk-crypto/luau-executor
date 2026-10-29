@@ -1,13 +1,11 @@
 // hooks.mm
 #import <Foundation/Foundation.h>
+#import <substrate.h> // Importa o Substrate
 #include "hooks.hpp"
 #include "exploit.hpp"
 #include "execution.hpp"
 #include "config.hpp"
 #include "memory.hpp"
-
-// Força o linker a procurar o nome C da função (remove o __Z9... do iOS)
-extern "C" void* DobbyHook(void* address, void* replace, void** origin);
 
 typedef uint64_t (*gc_step_t)(void*, int);
 static gc_step_t g_orig_gc_step = nullptr;
@@ -28,9 +26,8 @@ void SetupExecution(void* L) {
 
     uintptr_t gcStepAddr = base + Offsets::Luau::gc_step;
     
-    void* orig = nullptr;
-    DobbyHook((void*)gcStepAddr, (void*)HookedGcStep, &orig);
-    g_orig_gc_step = (gc_step_t)orig;
+    // Usa MSHookFunction do Substrate
+    MSHookFunction((void*)gcStepAddr, (void*)HookedGcStep, (void**)&g_orig_gc_step);
 
     if (g_orig_gc_step) NSLog(@"[Spork] gc_step hooked");
 }
