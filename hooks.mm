@@ -1,7 +1,7 @@
 // hooks.mm
 #import <Foundation/Foundation.h>
-#import "dobby.h" // Importa o header do Dobby corretamente
-#include <ptrauth.h> // Para remover a proteção PAC (arm64e)
+#import "dobby.h"
+#include <ptrauth.h>
 #include "hooks.hpp"
 #include "exploit.hpp"
 #include "execution.hpp"
@@ -26,9 +26,12 @@ void SetupExecution(void* L) {
     if (!base) return;
 
     uintptr_t gcStepAddr = base + Offsets::Luau::gc_step;
-    
-    // Remove a assinatura PAC do endereço
-    void* hookAddr = ptrauth_strip((void*)gcStepAddr, ptrauth_key_asm_isa);
+    void* hookAddr = (void*)gcStepAddr;
+
+    // Remove a assinatura PAC apenas se o processador suportar (arm64e)
+#if __has_feature(ptrauth_calls)
+    hookAddr = ptrauth_strip(hookAddr, ptrauth_key_function_pointer);
+#endif
 
     void* orig = nullptr;
     DobbyHook(hookAddr, (void*)HookedGcStep, &orig);
