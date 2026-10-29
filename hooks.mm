@@ -1,12 +1,13 @@
 // hooks.mm
 #import <Foundation/Foundation.h>
-#import "dobby.h"
-#include <ptrauth.h>
 #include "hooks.hpp"
 #include "exploit.hpp"
 #include "execution.hpp"
 #include "config.hpp"
 #include "memory.hpp"
+
+// DECLARAÇÃO MANUAL E FORÇADA DO DOBBY
+extern "C" void* DobbyHook(void* address, void* replace, void** origin);
 
 typedef uint64_t (*gc_step_t)(void*, int);
 static gc_step_t g_orig_gc_step = nullptr;
@@ -26,15 +27,9 @@ void SetupExecution(void* L) {
     if (!base) return;
 
     uintptr_t gcStepAddr = base + Offsets::Luau::gc_step;
-    void* hookAddr = (void*)gcStepAddr;
-
-    // Remove a assinatura PAC apenas se o processador suportar (arm64e)
-#if __has_feature(ptrauth_calls)
-    hookAddr = ptrauth_strip(hookAddr, ptrauth_key_function_pointer);
-#endif
-
+    
     void* orig = nullptr;
-    DobbyHook(hookAddr, (void*)HookedGcStep, &orig);
+    DobbyHook((void*)gcStepAddr, (void*)HookedGcStep, &orig);
     g_orig_gc_step = (gc_step_t)orig;
 
     if (g_orig_gc_step) NSLog(@"[Spork] gc_step hooked");
