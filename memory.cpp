@@ -9,11 +9,12 @@ namespace memory {
     bool safe_read(void* address, void* buffer, size_t size) {
         if (!address || !buffer || size == 0) return false;
         uintptr_t addr = (uintptr_t)address;
+        
+        // Checagem básica de endereço nulo/inválido
         if (addr < 0x100000000ULL) return false;
 
         vm_size_t out_size = 0;
-        // Usando mach_vm_read_overwrite que é mais estável no iOS moderno
-        kern_return_t kr = mach_vm_read_overwrite(mach_task_self(), (mach_vm_address_t)addr, (mach_vm_size_t)size, (mach_vm_address_t)buffer, &out_size);
+        kern_return_t kr = vm_read_overwrite(mach_task_self(), (vm_address_t)addr, (vm_size_t)size, (vm_address_t)buffer, &out_size);
         return (kr == KERN_SUCCESS && out_size == size);
     }
 
