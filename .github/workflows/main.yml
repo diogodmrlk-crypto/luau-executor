@@ -1,5 +1,6 @@
 name: Build Spork iOS Dylib
 on: [push, pull_request]
+
 jobs:
   build:
     runs-on: macos-latest
@@ -15,15 +16,16 @@ jobs:
       - name: Install ldid
         run: brew install ldid
 
-      - name: Build Tweak
+      - name: Build Tweak (Dylib only)
         run: |
           export THEOS=$HOME/theos
           export TARGET_CODESIGN=$(which ldid)
-          make package FINALPACKAGE=1
+          # Usa 'make' em vez de 'make package' para não gerar .deb
+          make FINALPACKAGE=1
 
       - name: Upload Dylib
         uses: actions/upload-artifact@v4
         with:
-          name: Spork-UI-Dylib
-          path: |
-            .theos/obj/**/*.dylib
+          name: Spork-Dylib
+          # O caminho exato onde o Theos salva a dylib
+          path: .theos/obj/arm64/Spork.dylib
