@@ -1,22 +1,14 @@
 TARGET = iphone:clang:latest:14.0
-ARCHS = arm64 arm64e
+ARCHS = arm64
 INSTALL_TARGET_PROCESSES = SpringBoard
 
 TWEAK_NAME = Spork
 
-Spork_FILES = Tweak.xm SporkUI.mm exploit.mm hooks.mm memory.cpp execution.cpp
-Spork_FILES += $(wildcard VM/src/*.cpp) $(wildcard Compiler/src/*.cpp) $(wildcard Ast/src/*.cpp) $(wildcard Bytecode/src/*.cpp) $(wildcard Common/src/*.cpp)
+# Apenas o tweak e a UI. Sem Luau, sem Dobby.
+Spork_FILES = Tweak.xm SporkUI.mm exploit.mm hooks.mm
 
-# Adicionado -Wno-error e -Wno-unused-but-set-variable para o build não parar com avisos
-Spork_CFLAGS = -fobjc-arc -std=c++17 -Wno-error -Wno-unused-but-set-variable -Wno-unused-variable \
-               -I$(THEOS_PROJECT_DIR)/VM/include \
-               -I$(THEOS_PROJECT_DIR)/Compiler/include \
-               -I$(THEOS_PROJECT_DIR)/Common/include \
-               -I$(THEOS_PROJECT_DIR)/Ast/include \
-               -I$(THEOS_PROJECT_DIR)/Bytecode/include \
-               -I$(THEOS_PROJECT_DIR)
-
-Spork_LDFLAGS = -undefined dynamic_lookup -L$(THEOS_PROJECT_DIR)/lib -lDobby
+Spork_CFLAGS = -fobjc-arc -std=c++17 -I$(THEOS_PROJECT_DIR)
+Spork_LDFLAGS = -undefined dynamic_lookup
 Spork_FRAMEWORKS = UIKit Foundation Security
 
 include $(THEOS)/makefiles/common.mk
