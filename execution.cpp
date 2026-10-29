@@ -4,7 +4,6 @@
 #include "memory.hpp"
 #include <cstdlib>
 #include <cstdio>
-
 #include "lua.h"
 #include "luacode.h"
 
