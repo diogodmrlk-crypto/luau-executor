@@ -1,0 +1,8 @@
+Package: com.spork.executor
+Name: Spork
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Spork UI & Executor
+Maintainer: YourName
+Author: YourName
+Section: Tweaks
