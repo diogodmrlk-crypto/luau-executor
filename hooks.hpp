@@ -1,2 +1,2 @@
-#pragma once
-void SetupExecution(void* L);
+#include "hooks.hpp"
+void SetupExecution(void* L) {}
