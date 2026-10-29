@@ -2,6 +2,7 @@
 #import "SporkUI.h"
 #import "exploit.hpp"
 #import "hooks.hpp"
+#import "execution.hpp" // ADICIONADO: Necessário para o ExecuteScript
 #import "memory.hpp"
 
 extern void* ExploitThread;
@@ -585,15 +586,17 @@ void SporkLog(NSString *format, ...) {
 }
 
 // ============================================================
-// INTEGRAÇÃO COM O MOTOR ATUAL (Luau + Hooks)
+// INTEGRAÇÃO COM O MOTOR ATUAL (Luau)
 // ============================================================
 - (void)injectExecutorAction {
     self.statusLabel.text = @"Injecting... (see logs)";
     self.statusLabel.textColor = [UIColor yellowColor];
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        SetupExploit();
-        SetupExecution(nullptr);
+        // O hook do luau_load já roda no Tweak.xm, aqui só confirmamos o estado
+        if (!ExploitThread) {
+            SetupExploit(); // Tenta forçar o hook de novo
+        }
         
         [NSThread sleepForTimeInterval:2.0];
         
@@ -614,15 +617,33 @@ void SporkLog(NSString *format, ...) {
 }
 
 - (void)executeInfiniteYield {
-    const char* iy_source = "print('Infinite Yield Loaded!')";
-    RequestExecution(std::string(iy_source));
-    SporkLog(@"Infinite Yield na fila.");
+    NSString *iy_source = @"print('Infinite Yield Loaded!')";
+    [self runScriptString:iy_source];
 }
 
 - (void)executeScriptAction {
     NSString *sourceCode = self.scriptEditor.text;
-    RequestExecution(std::string([sourceCode UTF8String]));
-    SporkLog(@"Script enfileirado para execução.");
+    if (sourceCode.length == 0) return;
+    [self runScriptString:sourceCode];
+}
+
+// FUNÇÃO NOVA: Executa diretamente na thread de background
+- (void)runScriptString:(NSString *)script {
+    if (ExploitThread) {
+        SporkLog(@"Executando script...");
+        std::string scriptStr([script UTF8String]);
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            int res = ExecuteScript(ExploitThread, scriptStr);
+            if (res == 0) {
+                SporkLog(@"Script executado com sucesso!");
+            } else {
+                SporkLog([NSString stringWithFormat:@"Erro na execução (código %d)", res]);
+            }
+        });
+    } else {
+        SporkLog(@"ERRO: Você precisa entrar no jogo e clicar em 'Inject Executor' primeiro!");
+    }
 }
 
 - (void)copyAction { if (self.scriptEditor.text.length > 0) [UIPasteboard generalPasteboard].string = self.scriptEditor.text; }
