@@ -2,8 +2,8 @@
 #import "SporkUI.h"
 #import "exploit.hpp"
 #import "hooks.hpp"
-#import "execution.hpp" // ADICIONADO: Necessário para o ExecuteScript
-#import "memory.hpp"
+#import "execution.hpp"
+#include "memory.hpp"
 
 extern void* ExploitThread;
 
@@ -586,19 +586,16 @@ void SporkLog(NSString *format, ...) {
 }
 
 // ============================================================
-// INTEGRAÇÃO COM O MOTOR ATUAL (Luau)
+// INTEGRAÇÃO COM O MOTOR ATUAL
 // ============================================================
 - (void)injectExecutorAction {
-    self.statusLabel.text = @"Injecting... (see logs)";
+    self.statusLabel.text = @"Injecting...";
     self.statusLabel.textColor = [UIColor yellowColor];
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        // O hook do luau_load já roda no Tweak.xm, aqui só confirmamos o estado
-        if (!ExploitThread) {
-            SetupExploit(); // Tenta forçar o hook de novo
-        }
+        SetupExploit();
         
-        [NSThread sleepForTimeInterval:2.0];
+        [NSThread sleepForTimeInterval:1.0];
         
         dispatch_async(dispatch_get_main_queue(), ^{
             if (ExploitThread) {
@@ -606,11 +603,11 @@ void SporkLog(NSString *format, ...) {
                 self.statusLabel.textColor = [UIColor greenColor];
                 [self.injectBtn setTitle:@"Injected" forState:UIControlStateNormal];
                 self.injectBtn.enabled = NO;
-                SporkLog(@"Executor injetado com sucesso!");
+                SporkLog(@"Injetado com sucesso!");
             } else {
-                self.statusLabel.text = @"Failed (Enter a game first!)";
-                self.statusLabel.textColor = [UIColor redColor];
-                SporkLog(@"Falha ao injetar: lua_State não encontrado. Entre em um jogo.");
+                self.statusLabel.text = @"Waiting for game...";
+                self.statusLabel.textColor = [UIColor orangeColor];
+                SporkLog(@"Aguardando lua_State. Certifique-se de estar dentro do jogo.");
             }
         });
     });
@@ -627,22 +624,19 @@ void SporkLog(NSString *format, ...) {
     [self runScriptString:sourceCode];
 }
 
-// FUNÇÃO NOVA: Executa diretamente na thread de background
 - (void)runScriptString:(NSString *)script {
     if (ExploitThread) {
         SporkLog(@"Executando script...");
         std::string scriptStr([script UTF8String]);
+        int res = ExecuteScript(ExploitThread, scriptStr);
         
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            int res = ExecuteScript(ExploitThread, scriptStr);
-            if (res == 0) {
-                SporkLog(@"Script executado com sucesso!");
-            } else {
-                SporkLog([NSString stringWithFormat:@"Erro na execução (código %d)", res]);
-            }
-        });
+        if (res == 0) {
+            SporkLog(@"Script executado com sucesso!");
+        } else {
+            SporkLog([NSString stringWithFormat:@"Erro na execução (código %d)", res]);
+        }
     } else {
-        SporkLog(@"ERRO: Você precisa entrar no jogo e clicar em 'Inject Executor' primeiro!");
+        SporkLog(@"ERRO: Vá na aba Home e clique em 'Inject Executor' primeiro.");
     }
 }
 
