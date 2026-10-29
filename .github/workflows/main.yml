@@ -1,8 +1,5 @@
 name: Build Spork iOS Dylib
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
@@ -14,7 +11,15 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ldid make git curl unzip
+          sudo apt-get install -y make git curl unzip
+
+      - name: Install ldid (Linux binary)
+        run: |
+          # Baixa o ldid compilado para Linux x86_64
+          curl -sLO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64
+          sudo mv ldid_linux_x86_64 /usr/local/bin/ldid
+          sudo chmod +x /usr/local/bin/ldid
+          ldid -v # Verifica se instalou certo
 
       - name: Setup Theos
         run: |
