@@ -3,7 +3,7 @@
 #import "exploit.hpp"
 #import "hooks.hpp"
 #import "execution.hpp"
-#include "memory.hpp"
+#import "memory.hpp"
 
 extern void* ExploitThread;
 
@@ -586,7 +586,7 @@ void SporkLog(NSString *format, ...) {
 }
 
 // ============================================================
-// INTEGRAÇÃO COM O MOTOR ATUAL
+// INTEGRAÇÃO COM O MOTOR ATUAL (Luau + Hooks)
 // ============================================================
 - (void)injectExecutorAction {
     self.statusLabel.text = @"Injecting...";
@@ -598,16 +598,16 @@ void SporkLog(NSString *format, ...) {
         [NSThread sleepForTimeInterval:1.0];
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (ExploitThread) {
+            if (ExploitThread && ExploitThread != 0) {
                 self.statusLabel.text = @"Success! Injected.";
                 self.statusLabel.textColor = [UIColor greenColor];
                 [self.injectBtn setTitle:@"Injected" forState:UIControlStateNormal];
                 self.injectBtn.enabled = NO;
-                SporkLog(@"Injetado com sucesso!");
+                SporkLog(@"Injetado com sucesso! lua_State: %p", ExploitThread);
             } else {
-                self.statusLabel.text = @"Waiting for game...";
-                self.statusLabel.textColor = [UIColor orangeColor];
-                SporkLog(@"Aguardando lua_State. Certifique-se de estar dentro do jogo.");
+                self.statusLabel.text = @"Failed (Offsets desatualizados)";
+                self.statusLabel.textColor = [UIColor redColor];
+                SporkLog(@"Falha: Offset do Roblox iOS mudou. O app está seguro, mas não achou o lua_State.");
             }
         });
     });
@@ -625,16 +625,18 @@ void SporkLog(NSString *format, ...) {
 }
 
 - (void)runScriptString:(NSString *)script {
-    if (ExploitThread) {
+    if (ExploitThread && ExploitThread != 0) {
         SporkLog(@"Executando script...");
         std::string scriptStr([script UTF8String]);
-        int res = ExecuteScript(ExploitThread, scriptStr);
         
-        if (res == 0) {
-            SporkLog(@"Script executado com sucesso!");
-        } else {
-            SporkLog([NSString stringWithFormat:@"Erro na execução (código %d)", res]);
-        }
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            int res = ExecuteScript(ExploitThread, scriptStr);
+            if (res == 0) {
+                SporkLog(@"Script executado com sucesso!");
+            } else {
+                SporkLog([NSString stringWithFormat:@"Erro na execução (código %d)", res]);
+            }
+        });
     } else {
         SporkLog(@"ERRO: Vá na aba Home e clique em 'Inject Executor' primeiro.");
     }
